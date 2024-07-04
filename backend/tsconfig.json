@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                           /* Define o padrão do JavaScript emitido. */
+    "module": "commonjs",                         /* Define o sistema de módulos. */
+    "rootDir": "./src",                           /* Diretório raiz das fontes de entrada. */
+    "outDir": "./dist",                           /* Diretório de saída para arquivos JavaScript compilados. */
+    "strict": true,                               /* Ativa todas as verificações de tipo estritas. */
+    "esModuleInterop": true,                      /* Permite a importação de módulos ES6. */
+    "skipLibCheck": true                          /* Pula a verificação de tipo dos arquivos de declaração. */
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,24 @@
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:KronoosPass123@172.19.0.2:5432/costumers 
+    depends_on:
+      - postgres
+    command: ["sh", "-c", "npx prisma migrate deploy && npm start"]
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: KronoosPass123
+      POSTGRES_DB: costumers
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+
+volumes:
+  postgres_data:
