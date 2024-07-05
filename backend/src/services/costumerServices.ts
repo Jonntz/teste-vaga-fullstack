@@ -1,6 +1,6 @@
 import fs from 'fs';
 import csv from 'csv-parser';
-import { parse } from 'date-fns';
+import { format, parse } from 'date-fns';
 import path from 'path';
 import { validateAndFormatCNPJ, validateAndFormatCPF } from '../utils/validators';
 import { prisma } from '../prismaClient/prisma';
@@ -46,8 +46,8 @@ export const processCostumersByCsv = async (costumerCsvData: string): Promise<vo
     .on('end', async () => {
       for (let row of rows) {
         const validCpfOrCnpj = validateAndFormatCPF(row.nrCpfCnpj) || validateAndFormatCNPJ(row.nrCpfCnpj);
-        const contractDate = parse(row.dtContrato, 'yyyyMMdd', new Date());
-        const vctDate = parse(row.dtVctPre, 'yyyyMMdd', new Date());
+        const contractDate = format(parse(row.dtContrato, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
+        const vctDate = format(parse(row.dtVctPre, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
 
         if(validCpfOrCnpj){
           await prisma.costumer.create({
@@ -88,8 +88,13 @@ export const processCostumersByCsv = async (costumerCsvData: string): Promise<vo
 };
 
 
-export const getAllCostumers = async (): Promise<csvColumns[]> => {
-  const data = await prisma.costumer.findMany();
+export const getAllCostumers = async (page:number = 1, pageSize:number = 10): Promise<csvColumns[]> => {
+  const data = await prisma.costumer.findMany(
+    {
+      skip: (page! - 1) * pageSize!,
+      take: pageSize,
+    }
+  );
 
   return data;
 };
