@@ -9,5 +9,5 @@
     "skipLibCheck": true                          /* Pula a verificação de tipo dos arquivos de declaração. */
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

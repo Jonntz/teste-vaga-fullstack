@@ -4,6 +4,7 @@ import { format, parse } from 'date-fns';
 import path from 'path';
 import { validateAndFormatCNPJ, validateAndFormatCPF } from '../utils/validators';
 import { prisma } from '../prismaClient/prisma';
+import { Prisma } from '@prisma/client';
 import { formatToBRL } from '../utils/formatters';
 
 interface csvColumns {
@@ -38,53 +39,70 @@ interface csvColumns {
 };
 
 
-export const processCostumersByCsv = async (costumerCsvData: string): Promise<void> => {
-  const rows: csvColumns[] = [];
+export const processCostumersByCsv = async (costumerCsvData: string) => {
+  const rows: Prisma.CostumerCreateInput[] = [];
   
-  fs.createReadStream(costumerCsvData).pipe(csv())
-    .on('data', (data) => rows.push(data))
-    .on('end', async () => {
-      for (let row of rows) {
-        const validCpfOrCnpj = validateAndFormatCPF(row.nrCpfCnpj) || validateAndFormatCNPJ(row.nrCpfCnpj);
-        const contractDate = format(parse(row.dtContrato, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
-        const vctDate = format(parse(row.dtVctPre, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
-
-        if(validCpfOrCnpj){
-          await prisma.costumer.create({
-            data: {
-              nrInst: row.nrInst,
-              nrAgencia: row.nrAgencia,	
-              cdClient: row.cdClient,	
-              nmClient: row.nmClient,	
-              nrCpfCnpj: row.nrCpfCnpj,	
-              nrContrato: row.nrContrato,	
-              dtContrato: String(contractDate),	
-              qtPrestacoes: row.qtPrestacoes,	
-              vlTotal: formatToBRL(parseFloat(row.vlTotal)),	
-              cdProduto: row.cdProduto,	
-              dsProduto: row.dsProduto,	
-              cdCarteira: row.cdCarteira,	
-              dsCarteira: row.dsCarteira,	
-              nrProposta: row.nrProposta,	
-              nrPresta: row.nrPresta,	
-              tpPresta: row.tpPresta,	
-              nrSeqPre: row.nrSeqPre,	
-              dtVctPre: String(vctDate),	
-              vlPresta: formatToBRL(parseFloat(row.vlPresta)),	
-              vlMora: formatToBRL(parseFloat(row.vlMora)),	
-              vlMulta: formatToBRL(parseFloat(row.vlMulta)),	
-              vlOutAcr: formatToBRL(parseFloat(row.vlOutAcr)),	
-              vlIof: formatToBRL(parseFloat(row.vlIof)),	
-              vlDescon: formatToBRL(parseFloat(row.vlDescon)),	
-              vlAtual: formatToBRL(parseFloat(row.vlAtual)),	
-              idSituac: row.idSituac,	
-              idSitVen: row.idSitVen,
-              status: isCorrectValue(parseInt(row.vlTotal), parseInt(row.qtPrestacoes), parseFloat(row.vlPresta))
-            },
-          });
+  return new Promise<void>((resolve, reject) => {
+    fs.createReadStream(costumerCsvData)
+    .pipe(csv())
+    .on('data', (row) => {
+      const contractDate = format(parse(row.dtContrato, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
+      const vctDate = format(parse(row.dtVctPre, 'yyyyMMdd', new Date()), "dd/MM/yyyy");
+      rows.push({
+          nrInst: row.nrInst,
+          nrAgencia: row.nrAgencia,
+          cdClient: row.cdClient,
+          nmClient: row.nmClient,
+          nrCpfCnpj: row.nrCpfCnpj,
+          nrContrato: row.nrContrato,
+          dtContrato: contractDate,
+          qtPrestacoes: row.qtPrestacoes,
+          vlTotal: row.vlTotal,
+          cdProduto: row.cdProduto,
+          dsProduto: row.dsProduto,
+          cdCarteira: row.cdCarteira,
+          dsCarteira: row.dsCarteira,
+          nrProposta: row.nrProposta,
+          nrPresta: row.nrPresta,
+          tpPresta: row.tpPresta,
+          nrSeqPre: row.nrSeqPre,
+          dtVctPre: vctDate,
+          vlPresta: row.vlPresta,
+          vlMora: row.vlMora,
+          vlMulta: row.vlMulta,
+          vlOutAcr: row.vlOutAcr,
+          vlIof: row.vlIof,
+          vlDescon: row.vlDescon,
+          vlAtual: row.vlAtual,
+          idSituac: row.idSituac,
+          idSitVen: row.idSitVen,
+          status: isCorrectValue(row.vlTotal, row.qtPrestacoes, row.vlPresta)
+        });
+      })
+      .on('end', async () => {
+        try {
+          let validCpfOrCnpj;
+          rows.forEach(row =>{
+            validCpfOrCnpj = validateAndFormatCPF(row.nrCpfCnpj) || validateAndFormatCNPJ(row.nrCpfCnpj) as boolean;
+          })
+          
+          if (!validCpfOrCnpj) {
+            
+            await prisma.costumer.createMany({
+              data: rows,
+            });
+          }
+          resolve();
+          
+        } catch (error) {
+          reject(error);
         }
-      }
+      })
+      .on('error', (error) => {
+        reject(error);
+      });
     });
+  
 };
 
 
